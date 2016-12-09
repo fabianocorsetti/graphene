@@ -1,0 +1,15 @@
+5           # Supercell size (n x n)
+-3.38       # Nearest-neighbour hopping [energy] (eV)
+.true.      # Use screened potential from file?
+50.0        # Electronic temperature (only for density calculation) [temperature] (K)
+0.0         # Chemical potential (only for density calculation) [energy] (eV)
+.false.     # Only calculate selected eigenvalues? (dos_E1 < eig < dos_E2)
+-15.0       # Lower bound for (L)DOS plots [energy] (eV)
+15.0        # Upper bound for (L)DOS plots [energy] (eV)
+0.01        # Energy delta for (L)DOS plots [energy] (eV)
+0.3         # Gaussian broadening for (L)DOS plots [energy] (eV)
+weights5    # Site info input filename (weights*)
+kweights5_4 # k-point info input filename (kweights*_*)
+sym_info5_4 # Symmetry ops input filename (sym_info*_*) (if present)
+1           # Number of rows in BLACS grid (must be a factor of total number of MPI processes)
+10          # Blocksize for ScaLAPACK
