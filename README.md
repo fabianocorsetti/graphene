@@ -79,15 +79,16 @@ Usage
     *   Output: The total DOS is written to `dos.dat`, and the LDOS of each
         site to `ldos.*.dat`. The electronic density is written to
         `density.dat`. Note that both the LDOS and density are only written for
-        the sites specified in the `weights*` file (normally this would be the
-        list of symmetrically non-equivalent sites).
+        symmetrically non-equivalent sites (as specified in the `weights*`
+        file).
 
 *   `adatom_post.x`:
 
     *   Run as: `./adatom_post.x`
     *   Input: The program reads both the `TB.in` input file used by `TB.x` and
-        the `ldos.*.dat` and `density.dat` output files it has produced. No
-        further input is needed.
+        the `ldos.*.dat` and `density.dat` output files it has produced. It
+        also reads the `weights*` file from `screening.x`. No further input is
+        needed.
     *   Output: The radially-averaged DOS is written to `rdos.*.dat`, and the
         radially-averaged electronic density is written to `rdensity.dat`.
 
