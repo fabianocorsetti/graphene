@@ -40,6 +40,7 @@ program screening
   integer :: b
   integer :: c
   integer :: N
+  integer :: num_imp
   integer :: iter
   integer :: max_iter
   integer :: par_n
@@ -68,8 +69,6 @@ program screening
   real(dp) :: scell(2,2)
   real(dp) :: scellr(2,2)
   real(dp) :: shift(2)
-  real(dp) :: par_h
-  real(dp) :: Z
   real(dp) :: eps
   real(dp) :: mu
   real(dp) :: vF
@@ -93,12 +92,16 @@ program screening
   real(dp) :: k_point2(2)
   real(dp), allocatable :: at_poss(:,:)
   real(dp), allocatable :: at_possf(:,:)
+  real(dp), allocatable :: imp_pos(:,:)
+  real(dp), allocatable :: par_h(:)
+  real(dp), allocatable :: Z(:)
   real(dp), allocatable :: positions(:,:)
   real(dp), allocatable :: rweights(:,:)
   real(dp), allocatable :: translation(:,:)
   real(dp), allocatable :: qpoints(:,:)
   real(dp), allocatable :: r(:,:,:)
   real(dp), allocatable :: rr(:,:,:)
+  real(dp), allocatable :: rrp(:,:,:)
   real(dp), allocatable :: rd(:,:)
   real(dp), allocatable :: rdr(:,:)
   real(dp), allocatable :: V(:,:)
@@ -110,6 +113,7 @@ program screening
   real(dp), allocatable :: Vxc(:,:)
 
   complex(dp), allocatable :: V0r(:,:)
+  complex(dp), allocatable :: V0r_comp(:,:)
   complex(dp), allocatable :: Vindr(:,:)
 
   type(SpglibDataset) :: dset
@@ -131,9 +135,16 @@ program screening
   read(10,*) par_n   ! Supercell size (n x n)
   read(10,*) mu      ! Chemical potential [energy] (eV)
   read(10,*) eps     ! Background dielectric constant (if .not. par_sigma)
-  read(10,*) par_h   ! Height of impurity above plane [length] (Ang)
-  read(10,*) Z       ! Impurity charge [charge] (e)
-  !Z=0.1_dp*0.5_dp*vF
+  read(10,*) num_imp ! Number of impurities
+  if (num_imp>0) then
+    allocate(imp_pos(2,num_imp))
+    allocate(par_h(num_imp))
+    allocate(Z(num_imp))
+    read(10,*) imp_pos ! In-plane position of impurities [length] (Ang)
+    read(10,*) par_h   ! Height of impurities above plane [length] (Ang)
+    read(10,*) Z       ! Impurity charges [charge] (e)
+    !Z=0.1_dp*0.5_dp*vF
+  end if
   read(10,*) lat_par ! Carbon-carbon distance [length] (Ang)
   read(10,*) vF      ! Fermi velocity [length] [time^-1] (a.u.)
 
@@ -165,7 +176,9 @@ program screening
   kF=abs(mu)/vF
   if (par_sigma) eps=1.0_dp
   par_h=par_h/bohr2A
+  imp_pos=imp_pos/bohr2A
   lat_par=lat_par/bohr2A
+  Z=-Z
 
   !~~~~~~~~~~~~~~~~!
   ! Setup geometry !
@@ -215,14 +228,22 @@ program screening
       end do
     end do
     lattice(3,3)=10.0_dp
-    allocate(positions(3,size_H+1))
+    allocate(positions(3,size_H+num_imp))
     do i=1,size_H
       positions(1:3,i)=(/modulo(at_possf(1,i),1.0_dp),modulo(at_possf(2,i),1.0_dp),0.0_dp/)
     end do
-    positions(1:3,size_H+1)=(/0.0_dp,0.0_dp,0.0_dp/)
-    allocate(atom_types(size_H+1))
+    allocate(atom_types(size_H+num_imp))
     atom_types=1
-    atom_types(size_H+1)=2
+    do a=1,num_imp
+      positions(1:3,size_H+a)=(/imp_pos(1,a),imp_pos(2,a),par_h(a)/)
+      atom_types(size_H+a)=1+a
+      do b=1,a-1
+        if (abs(Z(a)-Z(b))<1.0d-6) then
+          atom_types(size_H+a)=atom_types(size_H+b)
+          exit
+        end if
+      end do
+    end do
   end if
 
   if (calc_at_symm) then
@@ -230,7 +251,7 @@ program screening
     write(par_n_char,'(i10)') par_n
     file_name='weights'//trim(adjustl(par_n_char))
     open(20,file=trim(adjustl(file_name)))
-    dset=spg_get_dataset(lattice,positions,atom_types,size_H+1,1.0d-6)
+    dset=spg_get_dataset(lattice,positions,atom_types,size_H+num_imp,1.0d-6)
     c=0
     do i=1,size_H
       if (i-1==dset%equivalent_atoms(i)) c=c+1
@@ -325,14 +346,14 @@ program screening
     map=0
     is_shift=(/0,0,0/)
     num_kpoints=spg_get_ir_reciprocal_mesh(grid_point,map,mesh,is_shift,0,lattice,&
-                                           positions,atom_types,size_H+1,1.0d-6)
+                                           positions,atom_types,size_H+num_imp,1.0d-6)
 
-    max_size=100
+    max_size=24*par_n*par_n
     allocate(rotation(3,3,max_size))
     allocate(translation(3,max_size))
 
     num_symops=spg_get_symmetry(rotation,translation,max_size,lattice,positions,&
-                                atom_types,size_H+1,1.0d-6)
+                                atom_types,size_H+num_imp,1.0d-6)
 
     allocate(write_rot(num_symops))
     write_rot=.false.
@@ -444,9 +465,11 @@ program screening
   allocate(r(2,N,N))
   allocate(rd(N,N))
   allocate(rr(2,N/2+1,N))
+  allocate(rrp(2,N/2+1,N))
   allocate(rdr(N/2+1,N))
   allocate(V0(N,N))
   allocate(V0r(N/2+1,N))
+  allocate(V0r_comp(N/2+1,N))
   if (par_NL) then
     allocate(V(N,N))
     allocate(Vmix(N,N))
@@ -487,7 +510,10 @@ program screening
                      b*N*scellr(1:2,2)
           d=sqrt((rr(1,i,j)+shift(1))**2+&
                  (rr(2,i,j)+shift(2))**2)
-          if (d<rdr(i,j)) rdr(i,j)=d
+          if (d<rdr(i,j)) then
+            rrp(1:2,i,j)=rr(1:2,i,j)+shift(1:2)
+            rdr(i,j)=d
+          end if
         end do
       end do
     end do
@@ -497,30 +523,36 @@ program screening
   ! Calculate impurity potential with linear-response screening !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 
-  do i=1,N/2+1
-    do j=1,N
-      if (par_sigma) then
-        d=(eps_sigma*(eps_sigma+1.0_dp-(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma)))/&
-          (eps_sigma+1.0_dp+(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma))
-      else
-        d=1.0_dp
-      end if
-      if (par_NL) then
-        V0r(i,j)=cmplx_1
-      else
-        V0r(i,j)=cmplx(1.0_dp+4.0_dp*kF/(eps*vF*rdr(i,j)),0.0_dp)
-      end if
-      if (par_inter .and. (rdr(i,j)>2.0*kF)) then
-        x=2.0_dp*kF/rdr(i,j)
-        V0r(i,j)=exp(-rdr(i,j)*par_h)/((V0r(i,j)*d-(x*sqrt(1.0_dp-x**2)-acos(x))/(eps*vF))*rdr(i,j))
-      else
-        V0r(i,j)=exp(-rdr(i,j)*par_h)/(V0r(i,j)*d*rdr(i,j))
-      end if
+  V0r=cmplx_0
+  do a=1,num_imp
+    do i=1,N/2+1
+      do j=1,N
+        if (par_sigma) then
+          d=(eps_sigma*(eps_sigma+1.0_dp-(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma)))/&
+            (eps_sigma+1.0_dp+(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma))
+        else
+          d=1.0_dp
+        end if
+        if (par_NL) then
+          V0r_comp(i,j)=cmplx_1
+        else
+          V0r_comp(i,j)=cmplx(1.0_dp+4.0_dp*kF/(eps*vF*rdr(i,j)),0.0_dp)
+        end if
+        if (par_inter .and. (rdr(i,j)>2.0*kF)) then
+          x=2.0_dp*kF/rdr(i,j)
+          V0r_comp(i,j)=exp(-rdr(i,j)*par_h(a))/((V0r_comp(i,j)*d-(x*sqrt(1.0_dp-x**2)-acos(x))/(eps*vF))*rdr(i,j))
+        else
+          V0r_comp(i,j)=exp(-rdr(i,j)*par_h(a))/(V0r_comp(i,j)*d*rdr(i,j))
+        end if
+        V0r_comp(i,j)=V0r_comp(i,j)*Z(a)*exp(-cmplx_i*(imp_pos(1,a)*rrp(1,i,j)+&
+                                                       imp_pos(2,a)*rrp(2,i,j)))
+      end do
     end do
+    V0r=V0r+V0r_comp
   end do
   V0r(1,1)=cmplx_0
   call dfftw_execute_dft_c2r(plan_c2r,V0r,V0)
-  V0=-V0*Z*2.0_dp*Pi/(eps*area)
+  V0=V0*2.0_dp*Pi/(eps*area)
 
   if (.not. par_NL) then
     open(20,file='potential.dat')
@@ -648,13 +680,20 @@ program screening
     deallocate(Vmix)
     deallocate(V)
   end if
+  deallocate(V0r_comp)
   deallocate(V0r)
   deallocate(V0)
   deallocate(rdr)
+  deallocate(rrp)
   deallocate(rr)
   deallocate(rd)
   deallocate(r)
   deallocate(at_possf)
   deallocate(at_poss)
+  if (num_imp>0) then
+    deallocate(Z)
+    deallocate(par_h)
+    deallocate(imp_pos)
+  end if
 
 end program screening
