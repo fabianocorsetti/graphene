@@ -140,10 +140,11 @@ program screening
     allocate(imp_pos(2,num_imp))
     allocate(par_h(num_imp))
     allocate(Z(num_imp))
-    read(10,*) imp_pos ! In-plane position of impurities [length] (Ang)
-    read(10,*) par_h   ! Height of impurities above plane [length] (Ang)
-    read(10,*) Z       ! Impurity charges [charge] (e)
-    !Z=0.1_dp*0.5_dp*vF
+    do a=1,num_imp
+      read(10,*) imp_pos(1:2,a) ! In-plane position of impurities [length] (Ang)
+      read(10,*) par_h(a)       ! Height of impurities above plane [length] (Ang)
+      read(10,*) Z(a)           ! Impurity charges [charge] (e)
+    end do
   end if
   read(10,*) lat_par ! Carbon-carbon distance [length] (Ang)
   read(10,*) vF      ! Fermi velocity [length] [time^-1] (a.u.)

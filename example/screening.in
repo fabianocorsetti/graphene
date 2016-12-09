@@ -5,14 +5,19 @@
 5                 # Supercell size (n x n)
 0.0               # Chemical potential [energy] (eV)
 1.0               # Background dielectric constant (if .not. par_sigma)
-2.0               # Height of impurity above plane [length] (Ang)
-2.0               # Impurity charge [charge] (e)
+2                 # Number of impurities
+0.0  0.5          # In-plane position of impurity 1 [length] (Ang)
+2.0               # Height of impurity 1 above plane [length] (Ang)
+1.0               # Charge of impurity 1 [charge] (e)
+0.0 -0.5          # In-plane position of impurity 2 [length] (Ang)
+2.0               # Height of impurity 2 above plane [length] (Ang)
+1.0               # Charge of impurity 2 [charge] (e)
 1.42568           # Carbon-carbon distance [length] (Ang)
 0.502069354109045 # Fermi velocity [length] [time^-1] (a.u.)
-4                 # Monkhorst-Pack k-point mesh (k x k including Gamma)
-.true.            # Calculate k-point symmetry?
-.true.            # Calculate site symmetry?
 1                 # Fineness of real-space grid (m x m, where m=3*n*f)
 1000              # Maximum number of self-consistency iterations (if par_NL)
 0.01              # Potential mixing factor for self-consistency loop (if par_NL)
 1.0d-7            # Convergence tolerance for self-consistency loop (if par_NL) [energy] (Ha)
+4                 # Monkhorst-Pack k-point mesh (k x k including Gamma)
+.true.            # Calculate k-point symmetry?
+.true.            # Calculate site symmetry?
