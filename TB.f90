@@ -28,7 +28,8 @@ program TB
   logical :: par_pot, selected_eigs, is_gamma, have_symm
 
   integer :: mpi_err, mpi_size, mpi_rank
-  integer :: i, j, k, k1, k2, a, b, c, s, par_n, num_kpoints, num_symops, size_H, ldwork, lzwork, lawork, info, size_dos, par_2D, par_bs, num_ldos
+  integer :: i, j, k, k1, k2, a, b, c, s
+  integer :: par_n, num_kpoints, num_symops, size_H, ldwork, lzwork, lawork, info, size_dos, par_2D, par_bs, num_ldos
   integer :: pot_n, rmax
   integer :: num_eigs, nz, liwork
   integer, allocatable :: nn(:,:,:), ldos_at(:)
