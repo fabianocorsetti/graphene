@@ -2,7 +2,7 @@
 .true.            # Include interband transitions?
 .false.           # Include effective sigma-band screening? (if par_NL)
 .false.           # Include exchange-correlation potential? (if par_NL)
-10 5              # Supercell size (n1 x n2)
+5 5               # Supercell size (n1 x n2)
 0.0               # Chemical potential [energy] (eV)
 1.0               # Background dielectric constant (if .not. par_sigma)
 1                 # Number of impurities

@@ -18,7 +18,7 @@ screened potential for Coulomb charges on graphene and the symmetries of the
 supercell. `TB.x` is a parallel program for performing a tight-binding
 simulation of the system. `adatom_post.x` is a serial program for post-
 processing the output of the tight-binding simulation for the case of a single
-adatom at the origin of the supercell.
+adatom at the origin of an n x n supercell.
 
 Installation
 ------------
@@ -59,7 +59,7 @@ Usage
         k-point mesh to calculate.
     *   Output: The screened potential is written to `potential.dat`.
         Additional info for the tight-binding code is written to `weights*`
-        (atomic site info), `kweights*_*` (k-point info), and `sym_ops*_*`
+        (atomic site info), `kweights*` (k-point info), and `sym_ops*`
         (symmetry operations info, only present if k-point symmetry is
         calculated).
 
@@ -69,7 +69,7 @@ Usage
     *   Input: The program requires all the output files produced by
         `screening.x`, and reads a text file called `TB.in`. An example is
         provided in the `example` directory. All variables must be
-        present in the given order; note however that the `sym_ops*_*` filename
+        present in the given order; note however that the `sym_ops*` filename
         line is only present if the file is present.  An explanation for each
         variable is given in the example. The input file specifies the
         dimensions of the supercell, physical parameters used in the
