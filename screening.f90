@@ -238,7 +238,10 @@ program screening
     allocate(atom_types(size_H+num_imp))
     atom_types=1
     do a=1,num_imp
-      positions(1:3,size_H+a)=(/imp_pos(1,a),imp_pos(2,a),par_h(a)/)
+      shift(1:2)=scellr(1,1:2)*imp_pos(1,a)+&
+                 scellr(2,1:2)*imp_pos(2,a)
+      shift=shift/(2.0_dp*Pi)
+      positions(1:3,size_H+a)=(/modulo(shift(1),1.0_dp),modulo(shift(2),1.0_dp),modulo(par_h(a)/lattice(3,3),1.0_dp)/)
       atom_types(size_H+a)=1+a
       do b=1,a-1
         if (abs(Z(a)-Z(b))<1.0d-6) then
@@ -248,6 +251,14 @@ program screening
       end do
     end do
   end if
+write(1233,*) scell(1:2,1)*bohr2A
+write(1233,*) scell(1:2,2)*bohr2A
+do i=1,size_H
+write(1234,*) positions(1:3,i)
+end do
+do i=size_H+1,size_H+num_imp
+write(1235,*) positions(1:3,i)
+end do
 
   if (calc_at_symm) then
   if (0==0) then
