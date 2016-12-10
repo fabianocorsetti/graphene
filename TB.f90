@@ -107,8 +107,12 @@ program TB
       open(20,file=trim(adjustl(sym_ops_file)))
       read(20,'(i7,2(1x,i7))') num_symops, b, c
       allocate(at_t(num_symops))
+      do i=1,num_symops
+        at_t(i)%num=0
+      end do
       do i=1,b
         read(20,'(i7)') k
+        at_t(k)%num=c
         allocate(at_t(k)%list(c))
         do j=1,c
           read(20,'(i7)') at_t(k)%list(j)
@@ -150,11 +154,10 @@ program TB
     call mpi_bcast(num_symops,1,mpi_int,0,mpi_comm_world,info)
     if (mpi_rank/=0) allocate(at_t(num_symops))
     do i=1,num_symops
-      if (mpi_rank==0) a=size(at_t(i)%list)
-      call mpi_bcast(a,1,mpi_int,0,mpi_comm_world,info)
-      if (a/=0) then
-        if (mpi_rank/=0) allocate(at_t(i)%list(a))
-        call mpi_bcast(at_t(i)%list,a,mpi_int,0,mpi_comm_world,info)
+      call mpi_bcast(at_t(i)%num,1,mpi_int,0,mpi_comm_world,info)
+      if (at_t(i)%num/=0) then
+        if (mpi_rank/=0) allocate(at_t(i)%list(at_t(i)%num))
+        call mpi_bcast(at_t(i)%list,at_t(i)%num,mpi_int,0,mpi_comm_world,info)
       end if
     end do
   end if
@@ -443,8 +446,7 @@ program TB
   deallocate(at_poss)
   if (have_symm) then
     do i=1,num_symops
-      a=size(at_t(i)%list)
-      if (a/=0) deallocate(at_t(i)%list)
+      if (at_t(i)%num/=0) deallocate(at_t(i)%list)
     end do
     deallocate(at_t)
   end if
