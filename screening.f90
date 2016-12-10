@@ -251,14 +251,6 @@ program screening
       end do
     end do
   end if
-write(1233,*) scell(1:2,1)*bohr2A
-write(1233,*) scell(1:2,2)*bohr2A
-do i=1,size_H
-write(1234,*) positions(1:3,i)
-end do
-do i=size_H+1,size_H+num_imp
-write(1235,*) positions(1:3,i)
-end do
 
   if (calc_at_symm) then
   if (0==0) then

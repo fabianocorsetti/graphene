@@ -5,10 +5,13 @@
 5 5               # Supercell size (n1 x n2)
 0.0               # Chemical potential [energy] (eV)
 1.0               # Background dielectric constant (if .not. par_sigma)
-1                 # Number of impurities
-0.0  0.0          # In-plane position of impurity 1 [length] (Ang)
+2                 # Number of impurities
+-2.0  0.0         # In-plane position of impurity 1 [length] (Ang)
 2.0               # Height of impurity 1 above plane [length] (Ang)
 1.0               # Charge of impurity 1 [charge] (e)
+ 2.0  0.0         # In-plane position of impurity 2 [length] (Ang)
+2.0               # Height of impurity 2 above plane [length] (Ang)
+1.0               # Charge of impurity 2 [charge] (e)
 1.42568           # Carbon-carbon distance [length] (Ang)
 0.502069354109045 # Fermi velocity [length] [time^-1] (a.u.)
 1                 # Fineness of real-space grid (m1 x m2, where mx=3*nx*f)
