@@ -29,7 +29,7 @@ program TB
 
   integer :: mpi_err, mpi_size, mpi_rank
   integer :: i, j, k, k1, k2, a, b, c, s
-  integer :: par_n, num_kpoints, num_symops, size_H, ldwork, lzwork, lawork, info, size_dos, par_2D, par_bs, num_ldos
+  integer :: par_n(2), num_kpoints, num_symops, size_H, ldwork, lzwork, lawork, info, size_dos, par_2D, par_bs, num_ldos
   integer :: pot_n, rmax
   integer :: num_eigs, nz, liwork
   integer, allocatable :: nn(:,:,:), ldos_at(:)
@@ -62,7 +62,7 @@ program TB
 
   if (mpi_rank==0) then
     open(10,file='TB.in')
-    read(10,*) par_n
+    read(10,*) par_n(1:2)
     read(10,*) par_l
     read(10,*) par_b
     read(10,*) par_pot
@@ -124,7 +124,7 @@ program TB
     read(10,*) par_bs
     close(10)
   end if
-  call mpi_bcast(par_n,1,mpi_int,0,mpi_comm_world,info)
+  call mpi_bcast(par_n,2,mpi_int,0,mpi_comm_world,info)
   call mpi_bcast(par_l,1,mpi_double_precision,0,mpi_comm_world,info)
   call mpi_bcast(par_b,1,mpi_double_precision,0,mpi_comm_world,info)
   call mpi_bcast(par_pot,1,mpi_logical,0,mpi_comm_world,info)
@@ -173,10 +173,11 @@ program TB
   par_l=sqrt(3.0_dp)*par_l
   cell(1:2,1)=(/sqrt(3.0_dp)*0.5_dp*par_l, 0.5_dp*par_l/)
   cell(1:2,2)=(/sqrt(3.0_dp)*0.5_dp*par_l,-0.5_dp*par_l/)
-  scell=par_n*cell
+  scell(1:2,1)=par_n(1)*cell(1:2,1)
+  scell(1:2,2)=par_n(2)*cell(1:2,2)
   scellr(1:2,1)=(/Pi/scell(1,1),Pi/scell(2,1)/)
   scellr(1:2,2)=(/Pi/scell(1,2),Pi/scell(2,2)/)
-  size_H=2*(par_n**2)
+  size_H=2*(par_n(1)*par_n(2))
   allocate(at_poss(2,size_H))
   allocate(at_dist(size_H))
   allocate(nn(3,3,size_H))
@@ -187,8 +188,8 @@ program TB
   at_pos(1:2,1)=(/       sqrt(3.0_dp)*par_l/3.0_dp,0.0_dp/)
   at_pos(1:2,2)=(/2.0_dp*sqrt(3.0_dp)*par_l/3.0_dp,0.0_dp/)
   c=0
-  do a=0,par_n-1
-    do b=0,par_n-1
+  do a=0,par_n(1)-1
+    do b=0,par_n(2)-1
       shift(1:2)=a*cell(1:2,1)+&
                  b*cell(1:2,2)
       c=c+1
@@ -197,7 +198,7 @@ program TB
       at_poss(1:2,c)=at_pos(1:2,2)+shift(1:2)
     end do
   end do
-  area=0.5_dp*sqrt(3.0_dp)*(par_l*par_n)**2
+  area=0.5_dp*sqrt(3.0_dp)*(par_l**2)*par_n(1)*par_n(2)
   area_per_atom=area/size_H
 
   do i=1,size_H

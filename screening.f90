@@ -19,7 +19,8 @@ program screening
   complex(dp), parameter :: cmplx_i=(0.0_dp,1.0_dp)
   complex(dp), parameter :: cmplx_0=(0.0_dp,0.0_dp)
 
-  character(10) :: par_n_char, par_k_char
+  character(10) :: par_n_char(2)
+  character(10) :: par_k_char(2)
   character(11) :: symbol_int
   character(50) :: file_name
 
@@ -39,18 +40,18 @@ program screening
   integer :: a
   integer :: b
   integer :: c
-  integer :: N
+  integer :: N(2)
   integer :: num_imp
   integer :: iter
   integer :: max_iter
-  integer :: par_n
+  integer :: par_n(2)
   integer :: par_f
   integer :: size_H
   integer :: num_weights
   integer :: num_kpoints
   integer :: mesh(3)
   integer :: is_shift(3)
-  integer :: par_k
+  integer :: par_k(2)
   integer :: max_size
   integer :: num_symops
   integer :: weight
@@ -132,10 +133,10 @@ program screening
   ! Input parameters (physical) !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 
-  read(10,*) par_n   ! Supercell size (n x n)
-  read(10,*) mu      ! Chemical potential [energy] (eV)
-  read(10,*) eps     ! Background dielectric constant (if .not. par_sigma)
-  read(10,*) num_imp ! Number of impurities
+  read(10,*) par_n(1:2) ! Supercell size (n1 x n2)
+  read(10,*) mu         ! Chemical potential [energy] (eV)
+  read(10,*) eps        ! Background dielectric constant (if .not. par_sigma)
+  read(10,*) num_imp    ! Number of impurities
   if (num_imp>0) then
     allocate(imp_pos(2,num_imp))
     allocate(par_h(num_imp))
@@ -153,7 +154,7 @@ program screening
   ! Input parameters (numerical) !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 
-  read(10,*) par_f    ! Fineness of real-space grid (m x m, where m=3*n*f)
+  read(10,*) par_f    ! Fineness of real-space grid (m1 x m2, where mx=3*nx*f)
   read(10,*) max_iter ! Maximum number of self-consistency iterations (if par_NL)
   read(10,*) amix     ! Potential mixing factor for self-consistency loop (if par_NL)
   read(10,*) rms_tol  ! Convergence tolerance for self-consistency loop (if par_NL) [energy] (Ha)
@@ -162,7 +163,7 @@ program screening
   ! Input parameters (symmetry) !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 
-  read(10,*) par_k        ! Monkhorst-Pack k-point mesh (k x k including Gamma)
+  read(10,*) par_k(1:2)   ! Monkhorst-Pack k-point mesh (k1 x k2 including Gamma)
   read(10,*) calc_k_symm  ! Calculate k-point symmetry?
   read(10,*) calc_at_symm ! Calculate site symmetry?
   close(10)
@@ -172,7 +173,7 @@ program screening
   !~~~~~~~~~~~~~~~~~~!
 
   if (.not. par_NL) par_sigma=.false.
-  N=par_n*3*par_f
+  N(1:2)=par_n(1:2)*3*par_f
   mu=mu/Ha2eV
   kF=abs(mu)/vF
   if (par_sigma) eps=1.0_dp
@@ -188,13 +189,14 @@ program screening
   par_l=sqrt(3.0_dp)*lat_par
   cell(1:2,1)=(/sqrt(3.0_dp)*0.5_dp*par_l, 0.5_dp*par_l/)
   cell(1:2,2)=(/sqrt(3.0_dp)*0.5_dp*par_l,-0.5_dp*par_l/)
-  scell=par_n*cell
-  area=0.5_dp*sqrt(3.0_dp)*(par_l*par_n)**2
+  scell(1:2,1)=par_n(1)*cell(1:2,1)
+  scell(1:2,2)=par_n(2)*cell(1:2,2)
+  area=0.5_dp*sqrt(3.0_dp)*(par_l**2)*par_n(1)*par_n(2)
   scellr(1:2,1)=(/Pi/scell(1,1),Pi/scell(2,1)/)
   scellr(1:2,2)=(/Pi/scell(1,2),Pi/scell(2,2)/)
   arear=0.5_dp*sqrt(3.0_dp)*(scellr(1,1)**2+scellr(2,1)**2)
 
-  size_H=2*(par_n**2)
+  size_H=2*(par_n(1)*par_n(2))
   allocate(at_poss(2,size_H))
   allocate(at_possf(2,size_H))
   at_pos(1:2,1)=(/       sqrt(3.0_dp)*par_l/3.0_dp,0.0_dp/)
@@ -202,18 +204,18 @@ program screening
   at_posf(1:2,1)=(/1.0_dp/3.0_dp,1.0_dp/3.0_dp/)
   at_posf(1:2,2)=(/2.0_dp/3.0_dp,2.0_dp/3.0_dp/)
   c=0
-  do a=0,par_n-1
-    do b=0,par_n-1
+  do a=0,par_n(1)-1
+    do b=0,par_n(2)-1
       shift(1:2)=a*cell(1:2,1)+&
                  b*cell(1:2,2)
-      shiftf(1:2)=(/real(a,dp)/real(par_n,dp),&
-                    real(b,dp)/real(par_n,dp)/)
+      shiftf(1:2)=(/real(a,dp)/real(par_n(1),dp),&
+                    real(b,dp)/real(par_n(2),dp)/)
       c=c+1
       at_poss(1:2,c)=at_pos(1:2,1)+shift(1:2)
-      at_possf(1:2,c)=at_posf(1:2,1)/real(par_n,dp)+shiftf(1:2)
+      at_possf(1:2,c)=at_posf(1:2,1)/real(par_n(1:2),dp)+shiftf(1:2)
       c=c+1
       at_poss(1:2,c)=at_pos(1:2,2)+shift(1:2)
-      at_possf(1:2,c)=at_posf(1:2,2)/real(par_n,dp)+shiftf(1:2)
+      at_possf(1:2,c)=at_posf(1:2,2)/real(par_n(1:2),dp)+shiftf(1:2)
     end do
   end do
 
@@ -249,8 +251,10 @@ program screening
 
   if (calc_at_symm) then
   if (0==0) then
-    write(par_n_char,'(i10)') par_n
-    file_name='weights'//trim(adjustl(par_n_char))
+    write(par_n_char(1),'(i10)') par_n(1)
+    write(par_n_char(2),'(i10)') par_n(2)
+    file_name='weights'//trim(adjustl(par_n_char(1)))//'_'//&
+                         trim(adjustl(par_n_char(2)))
     open(20,file=trim(adjustl(file_name)))
     dset=spg_get_dataset(lattice,positions,atom_types,size_H+num_imp,1.0d-6)
     c=0
@@ -271,8 +275,10 @@ program screening
   else
     at_poss=at_poss*bohr2A
     scell=scell*bohr2A
-    write(par_n_char,'(i10)') par_n
-    file_name='weights'//trim(adjustl(par_n_char))
+    write(par_n_char(1),'(i10)') par_n(1)
+    write(par_n_char(2),'(i10)') par_n(2)
+    file_name='weights'//trim(adjustl(par_n_char(1)))//'_'//&
+                         trim(adjustl(par_n_char(2)))
     open(20,file=trim(adjustl(file_name)))
     num_weights=0
     allocate(iweights(size_H))
@@ -328,8 +334,10 @@ program screening
     scell=scell/bohr2A
   end if
   else
-    write(par_n_char,'(i10)') par_n
-    file_name='weights'//trim(adjustl(par_n_char))
+    write(par_n_char(1),'(i10)') par_n(1)
+    write(par_n_char(2),'(i10)') par_n(2)
+    file_name='weights'//trim(adjustl(par_n_char(1)))//'_'//&
+                         trim(adjustl(par_n_char(2)))
     open(20,file=trim(adjustl(file_name)))
     write(20,'(i7)') size_H
     do i=1,size_H
@@ -340,7 +348,7 @@ program screening
 
   if (calc_k_symm) then
 
-    mesh(1:3)=(/par_k,par_k,1/)
+    mesh(1:3)=(/par_k(1),par_k(2),1/)
     allocate(grid_point(3,product(mesh)))
     grid_point=0
     allocate(map(product(mesh)))
@@ -349,7 +357,7 @@ program screening
     num_kpoints=spg_get_ir_reciprocal_mesh(grid_point,map,mesh,is_shift,0,lattice,&
                                            positions,atom_types,size_H+num_imp,1.0d-6)
 
-    max_size=24*par_n*par_n
+    max_size=24*par_n(1)*par_n(2)
     allocate(rotation(3,3,max_size))
     allocate(translation(3,max_size))
 
@@ -358,8 +366,12 @@ program screening
 
     allocate(write_rot(num_symops))
     write_rot=.false.
-    write(par_k_char,'(i10)') par_k
-    file_name='kweights'//trim(adjustl(par_n_char))//'_'//trim(adjustl(par_k_char))
+    write(par_k_char(1),'(i10)') par_k(1)
+    write(par_k_char(2),'(i10)') par_k(2)
+    file_name='kweights'//trim(adjustl(par_n_char(1)))//'_'//&
+                          trim(adjustl(par_n_char(2)))//'_'//&
+                          trim(adjustl(par_k_char(1)))//'_'//&
+                          trim(adjustl(par_k_char(2)))
     open(20,file=trim(adjustl(file_name)))
     write(20,'(i7)') num_kpoints
     do i=1,product(mesh)
@@ -398,7 +410,10 @@ program screening
     close(20)
 
     if (any(write_rot)) then
-      file_name='sym_ops'//trim(adjustl(par_n_char))//'_'//trim(adjustl(par_k_char))
+      file_name='sym_ops'//trim(adjustl(par_n_char(1)))//'_'//&
+                           trim(adjustl(par_n_char(2)))//'_'//&
+                           trim(adjustl(par_k_char(1)))//'_'//&
+                           trim(adjustl(par_k_char(2)))
       open(20,file=trim(adjustl(file_name)))
       write(20,'(i7,2(1x,i7))') num_symops, count(write_rot), size_H
     end if
@@ -434,15 +449,19 @@ program screening
 
   else
 
-    num_kpoints=par_k*par_k
-    write(par_k_char,'(i10)') par_k
-    file_name='kweights'//trim(adjustl(par_n_char))//'_'//trim(adjustl(par_k_char))
+    num_kpoints=par_k(1)*par_k(2)
+    write(par_k_char(1),'(i10)') par_k(1)
+    write(par_k_char(2),'(i10)') par_k(2)
+    file_name='kweights'//trim(adjustl(par_n_char(1)))//'_'//&
+                          trim(adjustl(par_n_char(2)))//'_'//&
+                          trim(adjustl(par_k_char(1)))//'_'//&
+                          trim(adjustl(par_k_char(2)))
     open(20,file=trim(adjustl(file_name)))
     write(20,'(i7)') num_kpoints
-    do i=0,par_k-1
-      do j=0,par_k-1
-        write(20,'(3(es22.15e2,1x),i7)') real(i,dp)/par_k, &
-                                         real(j,dp)/par_k, &
+    do i=0,par_k(1)-1
+      do j=0,par_k(2)-1
+        write(20,'(3(es22.15e2,1x),i7)') real(i,dp)/par_k(1), &
+                                         real(j,dp)/par_k(2), &
                                          1.0_dp/num_kpoints, &
                                          0
       end do
@@ -463,30 +482,30 @@ program screening
   ! Setup grids !
   !~~~~~~~~~~~~~!
 
-  allocate(r(2,N,N))
-  allocate(rd(N,N))
-  allocate(rr(2,N/2+1,N))
-  allocate(rrp(2,N/2+1,N))
-  allocate(rdr(N/2+1,N))
-  allocate(V0(N,N))
-  allocate(V0r(N/2+1,N))
-  allocate(V0r_comp(N/2+1,N))
+  allocate(r(2,N(1),N(2)))
+  allocate(rd(N(1),N(2)))
+  allocate(rr(2,N(1)/2+1,N(2)))
+  allocate(rrp(2,N(1)/2+1,N(2)))
+  allocate(rdr(N(1)/2+1,N(2)))
+  allocate(V0(N(1),N(2)))
+  allocate(V0r(N(1)/2+1,N(2)))
+  allocate(V0r_comp(N(1)/2+1,N(2)))
   if (par_NL) then
-    allocate(V(N,N))
-    allocate(Vmix(N,N))
-    allocate(rho(N,N))
-    allocate(Vind(N,N))
-    allocate(Vind_old(N,N))
-    allocate(Vindr(N/2+1,N))
-    if (par_xc) allocate(Vxc(N,N))
+    allocate(V(N(1),N(2)))
+    allocate(Vmix(N(1),N(2)))
+    allocate(rho(N(1),N(2)))
+    allocate(Vind(N(1),N(2)))
+    allocate(Vind_old(N(1),N(2)))
+    allocate(Vindr(N(1)/2+1,N(2)))
+    if (par_xc) allocate(Vxc(N(1),N(2)))
   end if
-  call dfftw_plan_dft_r2c_2d(plan_r2c,N,N,V0,V0r,FFTW_ESTIMATE)
-  call dfftw_plan_dft_c2r_2d(plan_c2r,N,N,V0r,V0,FFTW_ESTIMATE)
+  call dfftw_plan_dft_r2c_2d(plan_r2c,N(1),N(2),V0,V0r,FFTW_ESTIMATE)
+  call dfftw_plan_dft_c2r_2d(plan_c2r,N(1),N(2),V0r,V0,FFTW_ESTIMATE)
 
-  do i=1,N
-    do j=1,N
-      r(1:2,i,j)=(real(i-1,dp)/N)*scell(1:2,1)+&
-                 (real(j-1,dp)/N)*scell(1:2,2)
+  do i=1,N(1)
+    do j=1,N(2)
+      r(1:2,i,j)=(real(i-1,dp)/N(1))*scell(1:2,1)+&
+                 (real(j-1,dp)/N(2))*scell(1:2,2)
       rd(i,j)=9999999.9_dp
       do a=-1,1
         do b=-1,1
@@ -500,15 +519,15 @@ program screening
     end do
   end do
 
-  do i=1,N/2+1
-    do j=1,N
+  do i=1,N(1)/2+1
+    do j=1,N(2)
       rr(1:2,i,j)=real(i-1,dp)*scellr(1:2,1)+&
                   real(j-1,dp)*scellr(1:2,2)
       rdr(i,j)=9999999.9_dp
       do a=-1,1
         do b=-1,1
-          shift(1:2)=a*N*scellr(1:2,1)+&
-                     b*N*scellr(1:2,2)
+          shift(1:2)=a*N(1)*scellr(1:2,1)+&
+                     b*N(2)*scellr(1:2,2)
           d=sqrt((rr(1,i,j)+shift(1))**2+&
                  (rr(2,i,j)+shift(2))**2)
           if (d<rdr(i,j)) then
@@ -526,8 +545,8 @@ program screening
 
   V0r=cmplx_0
   do a=1,num_imp
-    do i=1,N/2+1
-      do j=1,N
+    do i=1,N(1)/2+1
+      do j=1,N(2)
         if (par_sigma) then
           d=(eps_sigma*(eps_sigma+1.0_dp-(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma)))/&
             (eps_sigma+1.0_dp+(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma))
@@ -558,9 +577,9 @@ program screening
   if (.not. par_NL) then
     open(20,file='potential.dat')
     do k=1,size_H
-      do i=1,N/par_f
+      do i=1,N(1)/par_f
         a=par_f*(i-1)+1
-        do j=1,N/par_f
+        do j=1,N(2)/par_f
           b=par_f*(j-1)+1
           d=(r(1,a,b)-at_poss(1,k))**2+&
             (r(2,a,b)-at_poss(2,k))**2
@@ -584,15 +603,15 @@ program screening
 
       rho=(mu-Vmix)*abs(mu-Vmix)
       if (par_xc) then
-        do i=1,N
-          do j=1,N
+        do i=1,N(1)
+          do j=1,N(2)
             Vxc(i,j)=-sign(1.0_dp,rho(i,j))*alpha_xc*sqrt(abs(rho(i,j)/(Pi*(vF**2))))*log(abs(rho(i,j)/(Pi*(vF**2))))
           end do
         end do
       end if
       call dfftw_execute_dft_r2c(plan_r2c,rho,Vindr)
-      do i=1,N/2+1
-        do j=1,N
+      do i=1,N(1)/2+1
+        do j=1,N(2)
           if (par_sigma) then
             d=(eps_sigma*(eps_sigma+1.0_dp-(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma)))/&
               (eps_sigma+1.0_dp+(eps_sigma-1.0_dp)*exp(-rdr(i,j)*d_sigma))
@@ -609,22 +628,22 @@ program screening
       end do
       Vindr(1,1)=cmplx_0
       call dfftw_execute_dft_c2r(plan_c2r,Vindr,Vind)
-      Vind=Vind*2.0_dp/(eps*(vF**2)*(N**2))
+      Vind=Vind*2.0_dp/(eps*(vF**2)*(N(1)*N(2)))
       rms=0.0_dp
       if (par_xc) then
-        do i=1,N
-          do j=1,N
+        do i=1,N(1)
+          do j=1,N(2)
             rms=rms+(Vind(i,j)+Vxc(i,j)-Vind_old(i,j))**2
           end do
         end do
       else
-        do i=1,N
-          do j=1,N
+        do i=1,N(1)
+          do j=1,N(2)
             rms=rms+(Vind(i,j)-Vind_old(i,j))**2
           end do
         end do
       end if
-      rms=sqrt(rms/(N**2))
+      rms=sqrt(rms/(N(1)*N(2)))
       print('(i5,1x,es12.5e2)'), iter, rms
       if (rms<rms_tol) conv=.true.
       if (par_xc) then
@@ -638,18 +657,18 @@ program screening
 
       if (conv .or. (iter==max_iter)) then
         charge2D=0.0_dp
-        do i=1,N
-          do j=1,N
+        do i=1,N(1)
+          do j=1,N(2)
             charge2D=charge2D+rho(i,j)
           end do
         end do
-        charge2D=charge2D*area/((N**2)*Pi*(vF**2))
+        charge2D=charge2D*area/((N(1)*N(2))*Pi*(vF**2))
         print('(a1,5x,es12.5e2)'), '#', -charge2D
         open(20,file='potential.dat')
         do k=1,size_H
-          do i=1,N/par_f
+          do i=1,N(1)/par_f
             a=par_f*(i-1)+1
-            do j=1,N/par_f
+            do j=1,N(2)/par_f
               b=par_f*(j-1)+1
               d=(r(1,a,b)-at_poss(1,k))**2+&
                 (r(2,a,b)-at_poss(2,k))**2

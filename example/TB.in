@@ -1,4 +1,4 @@
-5           # Supercell size (n x n)
+10 5        # Supercell size (n1 x n2)
 1.42568     # Carbon-carbon distance [length] (Ang)
 -3.38       # Nearest-neighbour hopping [energy] (eV)
 .true.      # Use screened potential from file?
@@ -9,8 +9,8 @@
 15.0        # Upper bound for (L)DOS plots [energy] (eV)
 0.01        # Energy delta for (L)DOS plots [energy] (eV)
 0.3         # Gaussian broadening for (L)DOS plots [energy] (eV)
-weights5    # Site info input filename (weights*)
-kweights5_4 # k-point info input filename (kweights*_*)
-sym_ops5_4  # Symmetry ops input filename (sym_info*_*) (if present)
+weights10_5      # Site info input filename (weights*)
+kweights10_5_4_4 # k-point info input filename (kweights*_*)
+sym_ops10_5_4_4  # Symmetry ops input filename (sym_info*_*) (if present)
 1           # Number of rows in BLACS grid (must be a factor of total number of MPI processes)
 10          # Blocksize for ScaLAPACK
