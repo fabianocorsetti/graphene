@@ -23,9 +23,9 @@ adatom at the origin of an n x n supercell.
 Installation
 ------------
 
-1.  Modify `make.inc` to suit your needs. In particular, you will need to
-    provide a Fortran compiler (MPI-enabled for `TB.x`) and the following
-    libraries:
+1.  Copy `make.inc.example` to `make.inc` and modify it to suit your needs. In
+    particular, you will need to provide a Fortran compiler (MPI-enabled for
+    `TB.x`) and the following libraries:
 
     *   Spglib for crystal symmetries (only needed for `screening.x`)
     *   FFTW3 for FFTs (only needed for `screening.x`)
