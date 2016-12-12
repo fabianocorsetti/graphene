@@ -52,14 +52,11 @@ program screening
   integer :: mesh(3)
   integer :: is_shift(3)
   integer :: par_k(2)
-  integer :: max_size
-  integer :: num_symops
   integer :: weight
   integer, allocatable :: iweights(:)
   integer, allocatable :: grid_point(:,:)
   integer, allocatable :: map(:)
   integer, allocatable :: atom_types(:)
-  integer, allocatable :: rotation(:,:,:)
   integer, allocatable :: at_t(:)
   integer(long) :: plan_r2c
   integer(long) :: plan_c2r
@@ -98,7 +95,6 @@ program screening
   real(dp), allocatable :: Z(:)
   real(dp), allocatable :: positions(:,:)
   real(dp), allocatable :: rweights(:,:)
-  real(dp), allocatable :: translation(:,:)
   real(dp), allocatable :: qpoints(:,:)
   real(dp), allocatable :: r(:,:,:)
   real(dp), allocatable :: rr(:,:,:)
@@ -250,6 +246,7 @@ program screening
         end if
       end do
     end do
+    dset=spg_get_dataset(lattice,positions,atom_types,size_H+num_imp,1.0d-6)
   end if
 
   if (calc_at_symm) then
@@ -259,7 +256,6 @@ program screening
     file_name='weights'//trim(adjustl(par_n_char(1)))//'_'//&
                          trim(adjustl(par_n_char(2)))
     open(20,file=trim(adjustl(file_name)))
-    dset=spg_get_dataset(lattice,positions,atom_types,size_H+num_imp,1.0d-6)
     c=0
     do i=1,size_H
       if (i-1==dset%equivalent_atoms(i)) c=c+1
@@ -357,17 +353,15 @@ program screening
     allocate(map(product(mesh)))
     map=0
     is_shift=(/0,0,0/)
-    num_kpoints=spg_get_ir_reciprocal_mesh(grid_point,map,mesh,is_shift,0,lattice,&
-                                           positions,atom_types,size_H+num_imp,1.0d-6)
+    !num_kpoints=spg_get_ir_reciprocal_mesh(grid_point,map,mesh,is_shift,0,lattice,&
+    !                                       positions,atom_types,size_H+num_imp,1.0d-6)
+    allocate(qpoints(3,1))
+    qpoints=0.0_dp
+    num_kpoints=spg_get_stabilized_reciprocal_mesh(grid_point,map,mesh,is_shift,0,&
+                                                   dset%n_operations,dset%rotations,1,qpoints)
+    deallocate(qpoints)
 
-    max_size=24*par_n(1)*par_n(2)
-    allocate(rotation(3,3,max_size))
-    allocate(translation(3,max_size))
-
-    num_symops=spg_get_symmetry(rotation,translation,max_size,lattice,positions,&
-                                atom_types,size_H+num_imp,1.0d-6)
-
-    allocate(write_rot(num_symops))
+    allocate(write_rot(dset%n_operations))
     write_rot=.false.
     write(par_k_char(1),'(i10)') par_k(1)
     write(par_k_char(2),'(i10)') par_k(2)
@@ -387,9 +381,9 @@ program screening
           if (map(i)==map(j)) then
             found=.false.
             k_point2(1:2)=real(grid_point(1:2,j),dp)/real(mesh(1:2),dp)
-            do k=1,num_symops
-              new_pos(1:2)=rotation(1:2,1,k)*k_point(1)+&
-                           rotation(1:2,2,k)*k_point(2)
+            do k=1,dset%n_operations
+              new_pos(1:2)=dset%rotations(1:2,1,k)*k_point(1)+&
+                           dset%rotations(1:2,2,k)*k_point(2)
               new_pos=modulo(new_pos,1.0_dp)
               if ((abs(new_pos(1)-modulo(k_point2(1),1.0_dp))<1.0d-5) .and. &
                   (abs(new_pos(2)-modulo(k_point2(2),1.0_dp))<1.0d-5)) then
@@ -404,7 +398,7 @@ program screening
             end do
           end if
         end do
-        if (c/=num_symops) then
+        if (c/=dset%n_operations) then
           print*, "kSYMOPS ERROR!", i, c
           stop
         end if
@@ -418,15 +412,15 @@ program screening
                            trim(adjustl(par_k_char(1)))//'_'//&
                            trim(adjustl(par_k_char(2)))
       open(20,file=trim(adjustl(file_name)))
-      write(20,'(i7,2(1x,i7))') num_symops, count(write_rot), size_H
+      write(20,'(i7,2(1x,i7))') dset%n_operations, count(write_rot), size_H
     end if
-    do i=1,num_symops
+    do i=1,dset%n_operations
       if (write_rot(i)) then
         allocate(at_t(size_H))
         do j=1,size_H
-          new_pos(1:2)=rotation(1,1:2,i)*at_possf(1,j)+&
-                       rotation(2,1:2,i)*at_possf(2,j)
-          new_pos(1:2)=new_pos(1:2)+translation(1:2,i)
+          new_pos(1:2)=dset%rotations(1,1:2,i)*at_possf(1,j)+&
+                       dset%rotations(2,1:2,i)*at_possf(2,j)
+          new_pos(1:2)=new_pos(1:2)+dset%translations(1:2,i)
           new_pos=modulo(new_pos,1.0_dp)
           c=0
           do k=1,size_H
@@ -473,9 +467,8 @@ program screening
 
   end if
 
+  !if (calc_k_symm .or. calc_at_symm) spg_free_dataset_c(dset)
   if (allocated(write_rot)) deallocate(write_rot)
-  if (allocated(translation)) deallocate(translation)
-  if (allocated(rotation)) deallocate(rotation)
   if (allocated(atom_types)) deallocate(atom_types)
   if (allocated(positions)) deallocate(positions)
   if (allocated(map)) deallocate(map)

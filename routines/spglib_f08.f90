@@ -268,14 +268,13 @@
 
 
    function spg_get_stabilized_reciprocal_mesh(grid_point, map, mesh, is_shift, &
-      & is_time_reversal, lattice, num_rot, rotations, num_q, qpoints) bind(c)
+      & is_time_reversal, num_rot, rotations, num_q, qpoints) bind(c)
       import c_int, c_double
 !   Beware the map refers to positions starting at 0
       integer(c_int), intent(inout) :: grid_point(3,*), map(*)
       integer(c_int), intent(in) :: mesh(3)
       integer(c_int), intent(in) :: is_shift(3)
       integer(c_int), intent(in), value :: is_time_reversal
-      real(c_double), intent(in) :: lattice(3,3)
       integer(c_int), intent(in), value :: num_rot
       integer(c_int), intent(in) :: rotations(3,3,*)
       integer(c_int), intent(in), value :: num_q
