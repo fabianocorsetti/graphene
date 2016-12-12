@@ -381,12 +381,13 @@ program screening
           if (map(i)==map(j)) then
             found=.false.
             k_point2(1:2)=real(grid_point(1:2,j),dp)/real(mesh(1:2),dp)
+            k_point2=modulo(k_point2,1.0_dp)
             do k=1,dset%n_operations
               new_pos(1:2)=dset%rotations(1:2,1,k)*k_point(1)+&
                            dset%rotations(1:2,2,k)*k_point(2)
               new_pos=modulo(new_pos,1.0_dp)
-              if ((abs(new_pos(1)-modulo(k_point2(1),1.0_dp))<1.0d-5) .and. &
-                  (abs(new_pos(2)-modulo(k_point2(2),1.0_dp))<1.0d-5)) then
+              if ((abs(new_pos(1)-k_point2(1))<1.0d-5) .and. &
+                  (abs(new_pos(2)-k_point2(2))<1.0d-5)) then
                 c=c+1
                 if ((j/=i) .and. &
                     (.not. found)) then
