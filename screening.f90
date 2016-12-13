@@ -31,7 +31,6 @@ program screening
   logical :: calc_k_symm
   logical :: calc_at_symm
   logical :: conv
-  logical :: found
   logical, allocatable :: write_rot(:)
 
   integer :: i
@@ -371,15 +370,15 @@ program screening
                           trim(adjustl(par_k_char(2)))
     open(20,file=trim(adjustl(file_name)))
     write(20,'(i7)') num_kpoints
+    c=0
     do i=1,product(mesh)
       if (i-1==map(i)) then
         weight=count(map==i-1)
         k_point(1:2)=real(grid_point(1:2,i),dp)/real(mesh(1:2),dp)
+        c=c+1
         write(20,'(3(es22.15e2,1x),i7)') k_point(1:2), real(weight,dp)/real(product(mesh),dp), weight-1
-        c=0
         do j=1,product(mesh)
           if (map(i)==map(j)) then
-            found=.false.
             k_point2(1:2)=real(grid_point(1:2,j),dp)/real(mesh(1:2),dp)
             k_point2=modulo(k_point2,1.0_dp)
             do k=1,dset%n_operations
@@ -388,23 +387,22 @@ program screening
               new_pos=modulo(new_pos,1.0_dp)
               if ((abs(new_pos(1)-k_point2(1))<1.0d-5) .and. &
                   (abs(new_pos(2)-k_point2(2))<1.0d-5)) then
-                c=c+1
-                if ((j/=i) .and. &
-                    (.not. found)) then
-                  found=.true.
+                if (j/=i) then
                   write_rot(k)=.true.
+                  c=c+1
                   write(20,'(i7)') k
+                  exit
                 end if
               end if
             end do
           end if
         end do
-        if (c/=dset%n_operations) then
-          print*, "kSYMOPS ERROR!", i, c
-          stop
-        end if
       end if
     end do
+    if (c/=product(mesh)) then
+      print*, "kSYMOPS ERROR!", c, product(mesh)
+      stop
+    end if
     close(20)
 
     if (any(write_rot)) then
