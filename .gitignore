@@ -1,0 +1,5 @@
+make.inc
+*.x
+*.a
+*.o
+*.mod
