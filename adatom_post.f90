@@ -19,7 +19,7 @@ program adatom_post
   logical :: par_pot, selected_eigs
 
   integer :: i, j, k, a, b, c
-  integer :: par_n, num_ldos, size_H, num_bins, size_dos
+  integer :: par_n(2), num_ldos, size_H, num_bins, size_dos
   integer, allocatable :: ldos_at(:), r_bins(:), r_count(:)
 
   real(dp) :: par_l, par_b, par_T, par_mu, dos_E1, dos_E2, dos_dE, dos_w, E
@@ -29,7 +29,7 @@ program adatom_post
   type(k_info), allocatable :: at_sym(:)
 
   open(10,file='TB.in')
-  read(10,*) par_n
+  read(10,*) par_n(1:2)
   read(10,*) par_l
   read(10,*) par_b
   read(10,*) par_pot
@@ -55,19 +55,25 @@ program adatom_post
   end do
   close(20)
 
+  if (par_n(1)/=par_n(2)) then
+    print*, "ERROR! Supercell not n x n"
+    stop
+  end if
+
   par_l=sqrt(3.0_dp)*par_l
   cell(1:2,1)=(/sqrt(3.0_dp)*0.5_dp*par_l, 0.5_dp*par_l/)
   cell(1:2,2)=(/sqrt(3.0_dp)*0.5_dp*par_l,-0.5_dp*par_l/)
-  scell=par_n*cell
-  size_H=2*(par_n**2)
+  scell(1:2,1)=par_n(1)*cell(1:2,1)
+  scell(1:2,2)=par_n(2)*cell(1:2,2)
+  size_H=2*(par_n(1)*par_n(2))
   allocate(at_poss(2,size_H))
   allocate(at_dist(size_H))
 
   at_pos(1:2,1)=(/       sqrt(3.0_dp)*par_l/3.0_dp,0.0_dp/)
   at_pos(1:2,2)=(/2.0_dp*sqrt(3.0_dp)*par_l/3.0_dp,0.0_dp/)
   c=0
-  do a=0,par_n-1
-    do b=0,par_n-1
+  do a=0,par_n(1)-1
+    do b=0,par_n(2)-1
       shift(1:2)=a*cell(1:2,1)+&
                  b*cell(1:2,2)
       c=c+1
@@ -80,8 +86,8 @@ program adatom_post
   allocate(r_bins(size_H))
   r_bins=0
 
-  at_dist=999999.9_dp
   do i=1,size_H
+    at_dist=999999.9_dp
     do a=-1,1
       do b=-1,1
         shift(1:2)=a*scell(1:2,1)+&
