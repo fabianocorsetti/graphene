@@ -86,8 +86,8 @@ program adatom_post
   allocate(r_bins(size_H))
   r_bins=0
 
+  at_dist=999999.9_dp
   do i=1,size_H
-    at_dist=999999.9_dp
     do a=-1,1
       do b=-1,1
         shift(1:2)=a*scell(1:2,1)+&
