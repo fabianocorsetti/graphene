@@ -1,4 +1,5 @@
 make.inc
+!MatrixSwitch/src/make.inc
 *.x
 *.a
 *.o
