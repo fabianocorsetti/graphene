@@ -17,8 +17,10 @@ example4.x : example4.F90
 clean : 
 	rm -f *.x
 
+LINK_MACRO = $< -I$(BUILDPATH)/include -I$(PSPINCLUDEPATH) $(BUILDPATH)/lib/$(LIBNAME) $(PSPLIB) $(SLAPLIB) $(LAPLIB) $(BLASLIB) -o $@
+
 .F90.x : 
-	$(FORTRAN) $(OPTS) $(FPPFLAGS) -I$(LIBPATH) $< $(LIBPATH)/$(LIBNAME) $(SLAPLIB) $(LAPLIB) $(BLASLIB) -o $@
+	$(FORTRAN) $(OPTS) $(FPPFLAGS) $(LINK_MACRO)
 
 .f90.x : 
-	$(FORTRAN) $(OPTS) -I$(LIBPATH) $< $(LIBPATH)/$(LIBNAME) $(SLAPLIB) $(LAPLIB) $(BLASLIB) -o $@
+	$(FORTRAN) $(OPTS) $(LINK_MACRO)

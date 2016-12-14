@@ -164,7 +164,7 @@ program TB
   call mpi_bcast(par_2D,1,mpi_int,0,mpi_comm_world,info)
   call mpi_bcast(par_bs,1,mpi_int,0,mpi_comm_world,info)
 
-  call ms_scalapack_setup(mpi_size,par_2D,'c',par_bs)
+  call ms_scalapack_setup(par_2D,'c',par_bs)
 
   norm_dist1=2.0_dp*(dos_w**2)
   norm_dist2=dos_w*sqrt(2.0_dp*Pi)
@@ -272,18 +272,16 @@ program TB
       call m_allocate(eigvecs,size_H,size_H,m_storage)
       call m_set(H,'a',0.0_dp,0.0_dp,m_operation)
       do i=1,size_H
-        call m_set_element(H,i,i,at_dist(i),m_operation)
+        call m_set_element(H,i,i,at_dist(i),0.0_dp,m_operation)
         do j=1,3
           if (is_gamma) then
-            call m_get_element(H,i,nn(1,j,i),del,m_operation)
-            call m_set_element(H,i,nn(1,j,i),del+par_b,m_operation)
+            call m_set_element(H,i,nn(1,j,i),par_b,1.0_dp,m_operation)
           else
             shift(1:2)=nn(2,j,i)*scell(1:2,1)+&
                        nn(3,j,i)*scell(1:2,2)
             kdotr=kp(1)*shift(1)+&
                   kp(2)*shift(2)
-            call m_get_element(H,i,nn(1,j,i),zel,m_operation)
-            call m_set_element(H,i,nn(1,j,i),zel+cmplx(par_b,0.0_dp,dp)*exp(cmplx_i*kdotr),m_operation)
+            call m_set_element(H,i,nn(1,j,i),cmplx(par_b,0.0_dp,dp)*exp(cmplx_i*kdotr),cmplx_1,m_operation)
           end if
         end do
       end do

@@ -1,4 +1,5 @@
-LIBPATH   = ../src/
-BLASLIB   = -lblas
-LAPLIB    = -llapack
-SLAPLIB   = -lscalapack
+BLASLIB = -lblas
+LAPLIB  = -llapack
+SLAPLIB = -lscalapack
+
+PSPLIB = ../../psp/lib/libpspblas.a
