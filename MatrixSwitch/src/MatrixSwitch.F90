@@ -3059,7 +3059,7 @@ contains
 
 #ifdef PSP
     ! initialized grid information in pspBLAS
-    call psp_gridinit_2D(ms_mpi_size,ms_lap_nprow,ms_lap_order,ms_lap_bs_def,ms_lap_bs_def,ms_lap_icontxt)
+    call psp_gridinit_2D(ms_mpi_comm,ms_mpi_size,ms_lap_nprow,ms_lap_order,ms_lap_bs_def,ms_lap_bs_def,ms_lap_icontxt)
 #endif
 
   end subroutine ms_scalapack_setup
