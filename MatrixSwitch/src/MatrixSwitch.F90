@@ -3005,8 +3005,8 @@ contains
   !================================================!
   ! implementation: ScaLAPACK                      !
   !================================================!
-#ifdef MPI
-  subroutine ms_scalapack_setup(nprow,order,bs_def,bs_list,icontxt)
+#if defined(MPI) && defined(SLAP)
+  subroutine ms_scalapack_setup(mpi_comm,nprow,order,bs_def,bs_list,icontxt)
     implicit none
     include 'mpif.h'
 
@@ -3014,6 +3014,7 @@ contains
 
     character(1), intent(in) :: order ! ordering of processor grid: 'r/R' or other for row-major, 'c/C' for column-major
 
+    integer, intent(in) :: mpi_comm ! MPI communicator
     integer, intent(in) :: nprow ! number of rows in the processor grid
     integer, intent(in) :: bs_def ! default block size
     ! This is a list of exceptions to the default block size for specific matrix dimension sizes. The list has to be formatted as:
@@ -3031,11 +3032,12 @@ contains
 
     !**********************************************!
 
-    ms_mpi_comm=mpi_comm_world
+    ms_mpi_comm=mpi_comm
     call mpi_comm_size(ms_mpi_comm,ms_mpi_size,mpi_err)
     call mpi_comm_rank(ms_mpi_comm,ms_mpi_rank,mpi_err)
     ms_lap_nprow=nprow
     ms_lap_npcol=ms_mpi_size/nprow
+    if (ms_lap_nprow*ms_lap_npcol/=ms_mpi_size) call die('ms_scalapack_setup: invalid nprow')
     ms_lap_order=order
     ms_lap_bs_def=bs_def
     if (present(bs_list)) then
@@ -3051,7 +3053,7 @@ contains
     if (present(icontxt)) then
        ms_lap_icontxt=icontxt
     else
-       call blacs_get(-1,0,ms_lap_icontxt)
+       ms_lap_icontxt=ms_mpi_comm
        call blacs_gridinit(ms_lap_icontxt,ms_lap_order,ms_lap_nprow,ms_lap_npcol)
     end if
 
