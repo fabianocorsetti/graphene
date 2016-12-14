@@ -207,7 +207,6 @@ program TB
   allocate(nn(3,3,size_H))
   allocate(eigvals(size_H))
   allocate(occs(size_H))
-  allocate(density(num_ldos))
 
   at_pos(1:2,1)=(/       sqrt(3.0_dp)*par_l/3.0_dp,0.0_dp/)
   at_pos(1:2,2)=(/2.0_dp*sqrt(3.0_dp)*par_l/3.0_dp,0.0_dp/)
@@ -274,12 +273,15 @@ program TB
     allocate(gap(mpi_size_k))
   end if
 
-  size_dos=nint((dos_E2-dos_E1)/dos_dE)
-  allocate(dos(size_dos))
-  allocate(at_dos(size_dos,num_ldos))
-  dos=0.0_dp
-  at_dos=0.0_dp
-  density=0.0_dp
+  if (mpi_rank_k==0) then
+    size_dos=nint((dos_E2-dos_E1)/dos_dE)
+    allocate(dos(size_dos))
+    allocate(at_dos(size_dos,num_ldos))
+    allocate(density(num_ldos))
+    dos=0.0_dp
+    at_dos=0.0_dp
+    density=0.0_dp
+  end if
 
   do k1=1,num_kpoints
     if (kpoint_in_group(k1)) then
@@ -398,49 +400,57 @@ program TB
       end if
       occ_tot=FD_occ_tot_eigs(par_T,par_mu,size_H,eigvals,occs)
       do i=1,num_eigs
-        do j=1,size_dos
-          E=dos_E1+(j-1)*dos_dE
-          dos(j)=dos(j)+kpoints(3,k1)*exp(-(E-eigvals(i))**2/norm_dist1)
-        end do
-        do k=1,num_ldos
-          call m_get_element(eigvecs,ldos_at(k),i,zel,m_operation)
-          density(k)=density(k)+kpoints(4,k1)*occs(i)*(abs(zel)**2)
+        if (mpi_rank_k==0) then
           do j=1,size_dos
             E=dos_E1+(j-1)*dos_dE
-            at_dos(j,k)=at_dos(j,k)+kpoints(4,k1)*(abs(zel)**2)*exp(-(E-eigvals(i))**2/norm_dist1)
+            dos(j)=dos(j)+kpoints(3,k1)*exp(-(E-eigvals(i))**2/norm_dist1)
           end do
-          do s=1,sym_kpoints(k1)%num
-            call m_get_element(eigvecs,at_t(sym_kpoints(k1)%list(s))%list(ldos_at(k)),i,zel,m_operation)
+        end if
+        do k=1,num_ldos
+          call m_get_element(eigvecs,ldos_at(k),i,zel,m_operation)
+          if (mpi_rank_k==0) then
             density(k)=density(k)+kpoints(4,k1)*occs(i)*(abs(zel)**2)
             do j=1,size_dos
               E=dos_E1+(j-1)*dos_dE
               at_dos(j,k)=at_dos(j,k)+kpoints(4,k1)*(abs(zel)**2)*exp(-(E-eigvals(i))**2/norm_dist1)
             end do
+          end if
+          do s=1,sym_kpoints(k1)%num
+            call m_get_element(eigvecs,at_t(sym_kpoints(k1)%list(s))%list(ldos_at(k)),i,zel,m_operation)
+            if (mpi_rank_k==0) then
+              density(k)=density(k)+kpoints(4,k1)*occs(i)*(abs(zel)**2)
+              do j=1,size_dos
+                E=dos_E1+(j-1)*dos_dE
+                at_dos(j,k)=at_dos(j,k)+kpoints(4,k1)*(abs(zel)**2)*exp(-(E-eigvals(i))**2/norm_dist1)
+              end do
+            end if
           end do
         end do
       end do
       call m_deallocate(eigvecs)
       call m_deallocate(H)
-      if (mpi_rank==0) call progress_bar(1,num_kpoints,k1)
     end if
+    if (mpi_rank==0) call progress_bar(1,num_kpoints,k1)
   end do
-  if (mpi_rank==0) allocate(dos_buffer(size_dos))
-  if (mpi_rank_k==0) call mpi_reduce(dos,dos_buffer,size_dos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
-  if (mpi_rank==0) then
-    dos=dos_buffer
-    deallocate(dos_buffer)
-  end if
-  if (mpi_rank==0) allocate(at_dos_buffer(size_dos,num_ldos))
-  if (mpi_rank_k==0) call mpi_reduce(at_dos,at_dos_buffer,size_dos*num_ldos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
-  if (mpi_rank==0) then
-    at_dos=at_dos_buffer
-    deallocate(at_dos_buffer)
-  end if
-  if (mpi_rank==0) allocate(density_buffer(num_ldos))
-  if (mpi_rank_k==0) call mpi_reduce(density,density_buffer,num_ldos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
-  if (mpi_rank==0) then
-    density=density_buffer
-    deallocate(density_buffer)
+  if (par_k_groups>1) then
+    if (mpi_rank==0) allocate(dos_buffer(size_dos))
+    if (mpi_rank_k==0) call mpi_reduce(dos,dos_buffer,size_dos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
+    if (mpi_rank==0) then
+      dos=dos_buffer
+      deallocate(dos_buffer)
+    end if
+    if (mpi_rank==0) allocate(at_dos_buffer(size_dos,num_ldos))
+    if (mpi_rank_k==0) call mpi_reduce(at_dos,at_dos_buffer,size_dos*num_ldos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
+    if (mpi_rank==0) then
+      at_dos=at_dos_buffer
+      deallocate(at_dos_buffer)
+    end if
+    if (mpi_rank==0) allocate(density_buffer(num_ldos))
+    if (mpi_rank_k==0) call mpi_reduce(density,density_buffer,num_ldos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
+    if (mpi_rank==0) then
+      density=density_buffer
+      deallocate(density_buffer)
+    end if
   end if
   if (mpi_rank==0) then
     dos=dos/norm_dist2
@@ -476,19 +486,22 @@ program TB
     close(11)
   end if
 
-  deallocate(at_dos)
-  deallocate(dos)
+  if (mpi_rank_k==0) then
+    deallocate(density)
+    deallocate(at_dos)
+    deallocate(dos)
+  end if
   if (selected_eigs) then
     deallocate(gap)
     deallocate(iclustr)
     deallocate(ifail)
   end if
-  deallocate(density)
   deallocate(occs)
   deallocate(eigvals)
   deallocate(nn)
   deallocate(at_dist)
   deallocate(at_poss)
+  deallocate(kpoint_in_group)
   if (have_symm) then
     do i=1,num_symops
       if (at_t(i)%num/=0) deallocate(at_t(i)%list)
