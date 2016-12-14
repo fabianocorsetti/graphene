@@ -26,8 +26,11 @@ program TB
   character(50) :: weights_file, kweights_file, sym_ops_file, ldos_file
 
   logical :: par_pot, selected_eigs, is_gamma, have_symm
+  logical, allocatable :: kpoint_in_group(:)
 
-  integer :: mpi_err, mpi_size, mpi_rank
+  integer :: mpi_size, mpi_rank, par_k_groups, k_group, num_kpoints_k
+  integer :: mpi_size_k, mpi_rank_k, mpi_comm_k
+  integer :: mpi_size_k0, mpi_rank_k0, mpi_comm_k0
   integer :: i, j, k, k1, k2, a, b, c, s
   integer :: par_n(2), num_kpoints, num_symops, size_H, ldwork, lzwork, lawork, info, size_dos, par_2D, par_bs, num_ldos
   integer :: pot_n, rmax
@@ -42,6 +45,7 @@ program TB
   real(dp) :: abstol, orfac, del
   real(dp) :: dr, r, pot_point, pot_av, sum
   real(dp), allocatable :: eigvals(:), occs(:), dos(:), at_poss(:,:), at_dist(:), at_dos(:,:), pot(:), density(:)
+  real(dp), allocatable :: dos_buffer(:), density_buffer(:), at_dos_buffer(:,:)
   real(dp), allocatable :: gap(:), dwork(:)
   real(dp), allocatable :: av(:,:), kpoints(:,:)
 
@@ -52,9 +56,9 @@ program TB
 
   type(k_info), allocatable :: sym_kpoints(:), at_t(:)
 
-  call mpi_init(mpi_err)
-  call mpi_comm_size(mpi_comm_world,mpi_size,mpi_err)
-  call mpi_comm_rank(mpi_comm_world,mpi_rank,mpi_err)
+  call mpi_init(info)
+  call mpi_comm_size(mpi_comm_world,mpi_size,info)
+  call mpi_comm_rank(mpi_comm_world,mpi_rank,info)
 
   m_dstorage='pddbc'
   m_zstorage='pzdbc'
@@ -120,6 +124,7 @@ program TB
       end do
       close(20)
     end if
+    read(10,*) par_k_groups
     read(10,*) par_2D
     read(10,*) par_bs
     close(10)
@@ -161,10 +166,29 @@ program TB
       end if
     end do
   end if
+  call mpi_bcast(par_k_groups,1,mpi_int,0,mpi_comm_world,info)
   call mpi_bcast(par_2D,1,mpi_int,0,mpi_comm_world,info)
   call mpi_bcast(par_bs,1,mpi_int,0,mpi_comm_world,info)
 
-  call ms_scalapack_setup(par_2D,'c',par_bs)
+  mpi_size_k=mpi_size/par_k_groups
+  mpi_rank_k=mod(mpi_rank,mpi_size_k)
+  k_group=(mpi_rank-mpi_rank_k)/mpi_size_k
+  call mpi_comm_split(mpi_comm_world,k_group,mpi_rank_k,mpi_comm_k,info)
+  call mpi_comm_size(mpi_comm_k,mpi_size_k,info)
+  call mpi_comm_rank(mpi_comm_k,mpi_rank_k,info)
+  allocate(kpoint_in_group(num_kpoints))
+  kpoint_in_group=.false.
+  num_kpoints_k=0
+  do k1=1,num_kpoints
+    if (mod(k1-1,par_k_groups)==k_group) then
+      kpoint_in_group(k1)=.true.
+      num_kpoints_k=num_kpoints_k+1
+    end if
+  end do
+  call mpi_comm_split(mpi_comm_world,mpi_rank_k,k_group,mpi_comm_k0,info)
+  call mpi_comm_size(mpi_comm_k0,mpi_size_k0,info)
+  call mpi_comm_rank(mpi_comm_k0,mpi_rank_k0,info)
+  call ms_scalapack_setup(mpi_comm_k,par_2D,'c',par_bs)
 
   norm_dist1=2.0_dp*(dos_w**2)
   norm_dist2=dos_w*sqrt(2.0_dp*Pi)
@@ -246,8 +270,8 @@ program TB
     abstol=0.0_dp
     orfac=-1.0_dp
     allocate(ifail(size_H))
-    allocate(iclustr(2*mpi_size))
-    allocate(gap(mpi_size))
+    allocate(iclustr(2*mpi_size_k))
+    allocate(gap(mpi_size_k))
   end if
 
   size_dos=nint((dos_E2-dos_E1)/dos_dE)
@@ -258,6 +282,7 @@ program TB
   density=0.0_dp
 
   do k1=1,num_kpoints
+    if (kpoint_in_group(k1)) then
       if ((kpoints(1,k1)<1.0d-12) .and. &
           (kpoints(2,k1)<1.0d-12)) then
         is_gamma=.true.
@@ -397,9 +422,30 @@ program TB
       call m_deallocate(eigvecs)
       call m_deallocate(H)
       if (mpi_rank==0) call progress_bar(1,num_kpoints,k1)
+    end if
   end do
-  dos=dos/norm_dist2
-  at_dos=at_dos/norm_dist2
+  if (mpi_rank==0) allocate(dos_buffer(size_dos))
+  if (mpi_rank_k==0) call mpi_reduce(dos,dos_buffer,size_dos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
+  if (mpi_rank==0) then
+    dos=dos_buffer
+    deallocate(dos_buffer)
+  end if
+  if (mpi_rank==0) allocate(at_dos_buffer(size_dos,num_ldos))
+  if (mpi_rank_k==0) call mpi_reduce(at_dos,at_dos_buffer,size_dos*num_ldos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
+  if (mpi_rank==0) then
+    at_dos=at_dos_buffer
+    deallocate(at_dos_buffer)
+  end if
+  if (mpi_rank==0) allocate(density_buffer(num_ldos))
+  if (mpi_rank_k==0) call mpi_reduce(density,density_buffer,num_ldos,mpi_double_precision,mpi_sum,0,mpi_comm_k0,info)
+  if (mpi_rank==0) then
+    density=density_buffer
+    deallocate(density_buffer)
+  end if
+  if (mpi_rank==0) then
+    dos=dos/norm_dist2
+    at_dos=at_dos/norm_dist2
+  end if
 
   if (mpi_rank==0) then
     open(11,file='density.dat')
@@ -456,6 +502,6 @@ program TB
   deallocate(kpoints)
   deallocate(ldos_at)
 
-  call mpi_finalize(mpi_err)
+  call mpi_finalize(info)
 
 end program TB

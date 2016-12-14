@@ -12,5 +12,6 @@
 weights5_5      # Site info input filename (weights*)
 kweights5_5_4_4 # k-point info input filename (kweights*)
 sym_ops5_5_4_4  # Symmetry ops input filename (sym_info*) (if present)
-1               # Number of rows in BLACS grid (must be a factor of total number of MPI processes)
+1               # Number of k-point groups (must be a factor of total number of MPI processes)
+1               # Number of rows in BLACS grid (must be a factor of (MPI processes/k-point groups))
 10              # Blocksize for ScaLAPACK
