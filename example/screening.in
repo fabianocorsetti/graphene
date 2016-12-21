@@ -14,7 +14,7 @@
 1.0               # Charge of impurity 2 [charge] (e)
 1.42568           # Carbon-carbon distance [length] (Ang)
 0.502069354109045 # Fermi velocity [length] [time^-1] (a.u.)
-1                 # Fineness of real-space grid (m1 x m2, where mx=3*nx*f)
+1                 # Fineness of real-space grid (f, where grid = 3*f*n1 x 3*f*n2)
 1000              # Maximum number of self-consistency iterations (if par_NL)
 0.01              # Potential mixing factor for self-consistency loop (if par_NL)
 1.0d-7            # Convergence tolerance for self-consistency loop (if par_NL) [energy] (Ha)
