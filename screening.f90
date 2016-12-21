@@ -149,7 +149,7 @@ program screening
   ! Input parameters (numerical) !
   !~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~!
 
-  read(10,*) par_f    ! Fineness of real-space grid (m1 x m2, where mx=3*nx*f)
+  read(10,*) par_f    ! Fineness of real-space grid (f, where grid = 3*f*n1 x 3*f*n2)
   read(10,*) max_iter ! Maximum number of self-consistency iterations (if par_NL)
   read(10,*) amix     ! Potential mixing factor for self-consistency loop (if par_NL)
   read(10,*) rms_tol  ! Convergence tolerance for self-consistency loop (if par_NL) [energy] (Ha)
